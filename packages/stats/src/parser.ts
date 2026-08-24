@@ -1,4 +1,3 @@
-import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import {
 	type AssistantMessage,
@@ -440,45 +439,7 @@ export async function parseSessionFile(sessionPath: string, fromOffset = 0): Pro
 	return { stats, userStats, userLinks, toolCalls, toolResults, newOffset: start + read };
 }
 
-/**
- * List all session directories (folders).
- */
-export async function listSessionFolders(): Promise<string[]> {
-	try {
-		const sessionsDir = getSessionsDir();
-		const entries = await fs.readdir(sessionsDir, { withFileTypes: true });
-		return entries.filter(e => e.isDirectory()).map(e => path.join(sessionsDir, e.name));
-	} catch {
-		return [];
-	}
-}
-
-/**
- * List all session files in a folder.
- */
-export async function listSessionFiles(folderPath: string): Promise<string[]> {
-	try {
-		const entries = await fs.readdir(folderPath, { recursive: true, withFileTypes: true });
-		return entries.filter(e => e.isFile() && e.name.endsWith(".jsonl")).map(e => path.join(e.parentPath, e.name));
-	} catch {
-		return [];
-	}
-}
-
-/**
- * List all session files across all folders.
- */
-export async function listAllSessionFiles(): Promise<string[]> {
-	const folders = await listSessionFolders();
-	const allFiles: string[] = [];
-
-	for (const folder of folders) {
-		const files = await listSessionFiles(folder);
-		allFiles.push(...files);
-	}
-
-	return allFiles;
-}
+export * from "./session-files";
 
 /**
  * Find a specific entry in a session file.

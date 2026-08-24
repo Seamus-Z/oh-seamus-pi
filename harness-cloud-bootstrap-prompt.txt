@@ -1,0 +1,122 @@
+你正在一台云服务器上实现一个独立于 OMP 的 Harness Cloud 控制平面。请直接在当前目录完成可运行的第一版，不要修改 OMP，也不要把产品绑定到任何单一 harness。
+
+## 产品目标
+
+构建一个云端管理系统，未来可以接入 OMP、DeepSeek Harness 和其他 agent/harness：
+
+1. 只有云端服务器有用户账号、登录和权限控制；本地客户端不运行账号系统，也不提供本地 Web 登录。
+2. 用户登录云端后，可以管理模型供应商、模型配置和 API 凭据。
+3. 可以管理文档：上传、下载、列出、删除，并保存元数据。
+4. 可以管理“上下文包”：本地 harness 以后通过统一 API/CLI 上传和下载会话、消息、附件、文档引用及恢复信息。
+5. 核心领域模型必须与 OMP 解耦，通过 adapter 接入不同 harness。第一版只定义 adapter 契约和通用 context bundle 格式，不实现 OMP/DeepSeek 的具体解析器。
+6. Web Dashboard 只连接云端 API。云端账号是唯一身份源。
+
+## 第一版范围
+
+实现一个可部署、可验证的单服务器版本：
+
+- TypeScript + Bun workspace。
+- `apps/api`：HTTP API。
+- `apps/web`：云端 Dashboard。
+- `packages/contracts`：共享 API 类型、验证 schema、Context Bundle v1 格式。
+- `packages/client`：给未来 harness adapter 使用的 TypeScript client。
+- PostgreSQL 作为结构化数据存储；如果服务器没有 PostgreSQL，提供 Docker Compose 启动方式。
+- 文档和 context bundle 的二进制内容先保存在服务端文件目录，通过 content hash 去重；元数据存 PostgreSQL。存储层必须有清晰接口，未来可替换 S3，但不要现在实现 S3。
+- API 凭据必须服务端加密保存。使用环境变量提供的 32 字节主密钥进行 AES-256-GCM 加密；响应永远不返回明文密钥，只返回掩码和元数据。
+- 密码使用 Argon2id；会话使用 HttpOnly、Secure、SameSite=Strict cookie。状态修改请求做同源校验。
+- 限制上传大小；文件名不能决定落盘路径；校验 content hash；避免目录穿越。
+- 所有用户数据按 `user_id` 隔离，任何查询都不能遗漏租户条件。
+
+## 核心数据模型
+
+至少包含：
+
+- users
+- web_sessions
+- provider_credentials
+- model_profiles
+- documents
+- blobs
+- context_bundles
+- context_versions
+- device_tokens
+- audit_events
+
+`model_profiles` 记录 provider、model id、base URL、参数和所引用的 credential，不复制明文密钥。
+
+`ContextBundleV1` 至少包含：
+
+- schemaVersion: 1
+- harness: `{ type, version?, adapterVersion? }`
+- contextId
+- title
+- createdAt / updatedAt
+- originalCwd（仅作为元数据，不在服务器上访问该路径）
+- messages（规范化 role/content/tool call/tool result）
+- attachments（hash、size、mediaType、logicalName）
+- documentRefs
+- modelProfileRef（可选）
+- resume（harness 专属 opaque metadata，不允许服务器执行）
+- sourceDevice（可选）
+
+Context 采用不可变版本：重复上传同一个 context 创建新 version；下载必须可指定 version；不得静默覆盖历史版本。
+
+## API
+
+实现并记录稳定的 `/api/v1` 接口：
+
+- auth：setup（仅首个管理员）、login、logout、me
+- provider credentials：CRUD；读取只返回掩码
+- model profiles：CRUD
+- documents：multipart upload、list、metadata、download、delete
+- contexts：create/upload version、list/search、metadata、download version、delete
+- device tokens：创建、列出、撤销；token 只在创建时显示一次
+- health/readiness
+
+浏览器使用 session cookie；未来本地 harness 使用 scoped device bearer token。Device token 至少区分 `contexts:read`、`contexts:write`、`documents:read`、`models:read`，数据库只保存 token hash。
+
+## Dashboard
+
+实现清晰可用的页面：
+
+- 登录/首次管理员初始化
+- Overview
+- Models & Providers
+- Documents
+- Contexts（列表、搜索、版本、上传、下载）
+- Devices/Tokens
+- Audit
+
+不要把本地文件系统会话扫描逻辑放进 Dashboard 或云端服务。云端只能看到显式上传的数据。
+
+## 明确非目标
+
+第一版不要实现：
+
+- 本地账号系统
+- OMP 专属 session 目录扫描
+- DeepSeek 专属解析
+- 云端远程执行本地命令
+- 自动同步、冲突合并、实时协作
+- 向量数据库/RAG
+- S3、Kubernetes、微服务拆分
+- OAuth/SSO
+
+## 工程要求
+
+1. 先检查当前目录和服务器已有工具，再给出简短实现计划；随后直接实现，不停留在脚手架。
+2. 优先复用仓库现有约定；如果目录为空，再创建 workspace。
+3. 提供 `.env.example`，不得提交真实密码、API key、主密钥或 token。
+4. 提供数据库 migration、seed/setup 流程和 Docker Compose。
+5. 所有外部输入使用共享 schema 校验；统一 JSON 错误格式。
+6. 写针对可观察契约的测试，至少覆盖：租户隔离、未授权访问、API key 不泄露、加密往返、context 版本不可变、hash 校验、目录穿越、device scope。
+7. 完成后必须实际启动 PostgreSQL、API 和 Web，在浏览器中完成：首次管理员初始化、登录、添加加密 provider key、创建 model profile、上传/下载文档、上传两个 context version、创建 scoped device token，并用 token 调 API。
+8. 最终报告具体启动命令、URL、环境变量、migration 状态和每项验证结果；不得声称未实际执行的检查通过。
+
+## 架构约束
+
+云端核心只理解通用 contracts；harness 特有逻辑属于未来 adapter：
+
+`local harness <-> adapter <-> packages/client <-> /api/v1 <-> cloud storage`
+
+服务端绝不能根据 `originalCwd` 读取文件，绝不能执行 `resume` 字段，绝不能把保存的 provider API key 返回给浏览器或 device client。

@@ -4,6 +4,7 @@ import type { DashboardSection } from "./app/routes";
 import { useHashRoute } from "./data/useHashRoute";
 import {
 	BehaviorRoute,
+	CloudRoute,
 	CostsRoute,
 	ErrorsRoute,
 	GainRoute,
@@ -12,6 +13,7 @@ import {
 	ProjectsRoute,
 	ProvidersRoute,
 	RequestsRoute,
+	SessionsRoute,
 	ToolsRoute,
 } from "./routes";
 import { RequestDrawer } from "./ui/RequestDrawer";
@@ -24,27 +26,22 @@ export default function App() {
 
 	const handleSyncComplete = useCallback((result: { success: boolean }) => {
 		if (result.success) {
-			setRefreshTrigger(prev => prev + 1);
+			setRefreshTrigger(previous => previous + 1);
 			setUpdatedAt(Date.now());
 		}
 	}, []);
-
-	// Stable identity so the drawer's effects don't tear down on every App render.
 	const closeDrawer = useCallback(() => setSelectedRequestId(null), []);
-
 	const active = section;
-
-	// Keep every visited section mounted and just toggle visibility. Remounting a
-	// route on each navigation replays the chart entry animations (a visible
-	// flicker); keeping it alive makes revisits instant while the live chart
-	// instances still animate in place on data/range updates. Only the active
-	// route fetches/polls (enabled), so hidden routes don't keep hitting the API.
 	const mountedRef = useRef<Set<DashboardSection>>(new Set());
 	mountedRef.current.add(active);
 
 	const renderRoute = (target: DashboardSection) => {
 		const isActive = target === active;
 		switch (target) {
+			case "sessions":
+				return <SessionsRoute active={isActive} />;
+			case "cloud":
+				return <CloudRoute active={isActive} />;
 			case "overview":
 				return (
 					<OverviewRoute
@@ -105,7 +102,6 @@ export default function App() {
 					</div>
 				))}
 			</AppLayout>
-
 			<RequestDrawer id={selectedRequestId} onClose={closeDrawer} />
 		</>
 	);

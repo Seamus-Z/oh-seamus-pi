@@ -5,6 +5,11 @@ import "./styles.css";
 import "./data/charts";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { ManagerGate } from "./ManagerGate";
 
 const root = createRoot(document.getElementById("root")!);
-root.render(<App />);
+root.render(
+	<ManagerGate>
+		<App />
+	</ManagerGate>,
+);

@@ -179,7 +179,7 @@ const ensureClientBuild = async () => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Usage Statistics</title>
+    <title>OMP Control Center</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -322,8 +322,6 @@ function createDashboardServer(port: number, hostname: string) {
 			const url = new URL(req.url);
 			const path = url.pathname;
 
-			// The identity header lets another omp session's reuse probe positively
-			// recognize this dashboard without allowing cross-origin API reads.
 			const dashboardHeaders: Record<string, string> = {
 				[STATS_DASHBOARD_HEADER]: STATS_DASHBOARD_SECURITY_VERSION,
 				[STATS_DASHBOARD_HOSTNAME_HEADER]: hostname,
@@ -342,7 +340,6 @@ function createDashboardServer(port: number, hostname: string) {
 					response = await handleStatic(path);
 				}
 
-				// Add the dashboard identity header to all responses.
 				const headers = new Headers(response.headers);
 				for (const key in dashboardHeaders) {
 					headers.set(key, dashboardHeaders[key]);

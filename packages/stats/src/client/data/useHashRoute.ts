@@ -3,6 +3,8 @@ import type { DashboardSection } from "../app/routes";
 import type { TimeRange } from "../types";
 
 const VALID_SECTIONS: DashboardSection[] = [
+	"sessions",
+	"cloud",
 	"overview",
 	"requests",
 	"errors",

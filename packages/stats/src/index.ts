@@ -17,6 +17,8 @@ export {
 } from "./aggregator";
 export { closeDb } from "./db";
 export { getGainDashboardStats } from "./gain-aggregator";
+export type { ManagerServer, ManagerSessionBridge } from "./manager-server";
+export { formatManagerUrl, startManagerServer } from "./manager-server";
 export { formatStatsDashboardUrl, startServer } from "./server";
 export type {
 	GainDashboardStats,
@@ -216,3 +218,11 @@ Examples:
 if (import.meta.main) {
 	main();
 }
+
+export type {
+	CloudSessionSummary,
+	SessionBundle,
+	SessionBundleFile,
+	SyncServerHandle,
+} from "./sync-server";
+export { handleSyncApi, startSyncServer } from "./sync-server";

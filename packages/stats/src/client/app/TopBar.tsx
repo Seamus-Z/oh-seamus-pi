@@ -27,14 +27,17 @@ export function TopBar({
 	onMenuToggle,
 	className = "",
 }: TopBarProps) {
-	const currentRoute = routes.find(r => r.id === activeSection);
+	const currentRoute = routes.find(route => route.id === activeSection);
 	const title = currentRoute?.label || "Observability";
-
-	const formatLastUpdated = (time: number | null) => {
-		if (!time) return "Not updated";
-		const date = new Date(time);
-		return `Updated ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
-	};
+	const managerView = activeSection === "sessions" || activeSection === "cloud";
+	let lastUpdated = "Not updated";
+	if (updatedAt) {
+		lastUpdated = `Updated ${new Date(updatedAt).toLocaleTimeString([], {
+			hour: "2-digit",
+			minute: "2-digit",
+			second: "2-digit",
+		})}`;
+	}
 
 	return (
 		<header className={`stats-top-bar ${className}`}>
@@ -51,22 +54,22 @@ export function TopBar({
 				)}
 				<h1 className="stats-page-title">{title}</h1>
 			</div>
-
 			<div className="stats-top-bar-right">
-				<div className="stats-top-bar-meta">
-					<span
-						className="stats-last-updated"
-						title={updatedAt ? new Date(updatedAt).toLocaleString() : undefined}
-					>
-						{formatLastUpdated(updatedAt)}
-					</span>
-				</div>
-
-				<RangeControl value={range} onChange={onRangeChange} />
-
+				{!managerView && (
+					<>
+						<div className="stats-top-bar-meta">
+							<span
+								className="stats-last-updated"
+								title={updatedAt ? new Date(updatedAt).toLocaleString() : undefined}
+							>
+								{lastUpdated}
+							</span>
+						</div>
+						<RangeControl value={range} onChange={onRangeChange} />
+					</>
+				)}
 				<ThemeToggle />
-
-				<SyncButton onSyncStart={onSyncStart} onSyncComplete={onSyncComplete} />
+				{!managerView && <SyncButton onSyncStart={onSyncStart} onSyncComplete={onSyncComplete} />}
 			</div>
 		</header>
 	);

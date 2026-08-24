@@ -14,6 +14,7 @@ import { formatDuration } from "./helpers/format";
 import { handleMcpAcp } from "./helpers/mcp";
 import { commandConsumed, errorMessage, parseSubcommand, usage } from "./helpers/parse";
 import { describeRedeemOutcome, type ResetUsageAccount, toResetUsageAccounts } from "./helpers/reset-usage";
+import { launchSessionManagerDashboard } from "./helpers/session-manager-dashboard";
 import { matchSessionPinAccounts, toSessionPinAccounts } from "./helpers/session-pin";
 import { launchStatsDashboard, parseStatsDashboardArgs } from "./helpers/stats-dashboard";
 import { handleTodoAcp } from "./helpers/todo";
@@ -335,6 +336,23 @@ export const BUILTIN_SESSION_SLASH_COMMANDS: ReadonlyArray<SlashCommandSpec> = [
 			}
 			runtime.ctx.showStatus("Usage: /usage [show|reset [account|active]]");
 			runtime.ctx.editor.setText("");
+		},
+	},
+	{
+		name: "manager",
+		icon: "handoff",
+		description: "Open the session manager connected to this terminal",
+		handle: async (_command, runtime) => {
+			try {
+				const result = await launchSessionManagerDashboard(async sessionPath => {
+					const switched = await runtime.session.switchSession(sessionPath);
+					if (!switched) throw new Error("Session switch was cancelled");
+				});
+				await runtime.output(result.message);
+			} catch (error) {
+				await runtime.output(`OMP Manager failed: ${errorMessage(error)}`);
+			}
+			return commandConsumed();
 		},
 	},
 	{
