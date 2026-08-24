@@ -40,9 +40,27 @@ cp permission-gate.ts ~/.omp/agent/extensions/
 | `tools.ts`       | Interactive `/tools` command to enable/disable tools with session persistence  |
 | `handoff.ts`     | Transfer context to a new focused session via `/handoff <goal>`                |
 | `qna.ts`         | Extracts questions from last response into editor via `ctx.ui.setEditorText()` |
+| `hub-sync/`      | Lossless OMP context push/pull via Harness Cloud device-token APIs            |
 | `status-line.ts` | Shows turn progress in footer via `ctx.ui.setStatus()` with themed colors      |
 | `thinking-note.ts` | Adds display-only supplemental UI below assistant thinking blocks              |
 | `snake.ts`       | Snake game with custom UI, keyboard handling, and session persistence          |
+
+#### Harness Cloud context sync
+
+Load `hub-sync/index.ts`, then configure the cloud endpoint and a scoped device token before starting OMP:
+
+```bash
+export HUB_BASE_URL=http://43.139.45.139
+export HUB_TOKEN='hcdt_...'
+omp
+```
+
+Use `/hub help` to see the command tree, `/hub push [jsonl-path]` to upload a session, and
+`/hub pull <context-id> [version]` to download and immediately open a lossless OMP session.
+`/hub files put <local-path> [folder]` uploads a file to Hub file space with multipart data.
+`/hub files get <document-id> [output-path]` downloads a file without overwriting existing local data.
+The `hub_file_read` model tool reads a bounded UTF-8 line range directly into AI context without creating a local file.
+Pull refuses preview-only bundles that lack `resume.ompJsonl`.
 
 ### Git Integration
 
